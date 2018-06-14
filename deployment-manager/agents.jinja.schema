@@ -1,0 +1,39 @@
+info:
+  title: Kubernetes cluster workers via KET
+  author: James Walton, Apprenda
+  description: Create VMs for Kubernetes workers
+
+required:
+  - region
+  - zone
+  - machineType
+  - serviceAccount
+
+properties:
+  region:
+    description: Region for subnet(s)
+    type: string
+    default: us-east4
+  zone:
+    description: Zone for worker instances
+    type: string
+    default: us-east4-c
+  machineType:
+    description: VM machine type
+    type: string
+    default: n1-standard-2
+  sourceImage:
+    description: Google URL for source boot disk (OS) image
+    type: string
+    default: projects/debian-cloud/global/images/debian-9-stretch-v20180611
+  instances:
+    description: Number of worker VMs
+    type: integer
+    default: 2
+  diskSizeGb:
+    description: Size of boot disk
+    type: integer
+    default: 10
+  serviceAccount:
+    description: Service Account for worker instances to enable cloud-provider integration
+    type: string

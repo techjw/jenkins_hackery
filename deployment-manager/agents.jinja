@@ -1,0 +1,40 @@
+resources:
+{% for k in range(1,properties["instances"]+1) %}
+  - type: compute.v1.instance
+    name: {{ env["deployment"] }}-agent-{{ k }}
+    properties:
+      zone: {{ properties["zone"] }}
+      machineType: projects/{{ env["project"] }}/zones/{{ properties["zone"] }}/machineTypes/{{ properties["machineType"] }}
+      networkInterfaces:
+        - network: $(ref.{{ env["deployment"] }}-network.selfLink)
+          subnetwork: $(ref.{{ env["deployment"] }}-subnet.selfLink)
+          accessConfigs:
+            - name: {{ env["deployment"] }}-agent-{{ k }}-eth0
+              type: ONE_TO_ONE_NAT
+      disks:
+        - deviceName: boot
+          type: PERSISTENT
+          boot: true
+          autoDelete: true
+          initializeParams:
+            diskName: {{ env["deployment"] }}-agent-{{ k }}-boot
+            diskType: projects/{{ env["project"] }}/zones/{{ properties["zone"] }}/diskTypes/pd-standard
+            diskSizeGb: {{ properties["bootDiskSizeGb"] }}
+            sourceImage: {{ properties["sourceImage"] }}
+        - deviceName: docker
+          type: PERSISTENT
+          boot: false
+          autoDelete: true
+          initializeParams:
+            diskName: {{ env["deployment"] }}-agent-{{ k }}-docker
+            diskType: projects/{{ env["project"] }}/zones/{{ properties["zone"] }}/diskTypes/pd-ssd
+            diskSizeGb: {{ properties["dockerDiskSizeGb"] }}
+        - deviceName: jenkins
+          type: PERSISTENT
+          boot: false
+          autoDelete: true
+          initializeParams:
+            diskName: {{ env["deployment"] }}-agent-{{ k }}-jenkins
+            diskType: projects/{{ env["project"] }}/zones/{{ properties["zone"] }}/diskTypes/pd-ssd
+            diskSizeGb: {{ properties["jenkinsDiskSizeGb"] }}
+{% endfor %}

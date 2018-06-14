@@ -1,0 +1,16 @@
+imports:
+  - path: infra.jinja
+  - path: server.jinja
+  # - path: agents.jinja
+
+resources:
+  - name: infra
+    type: infra.jinja
+  - name: server
+    type: server.jinja
+    properties:
+      machineType: g1-small
+  # - name: agents
+  #   type: agents.jinja
+  #   properties:
+  #     serviceAccount: kube-service-account@projectid.iam.gserviceaccount.com

@@ -1,0 +1,39 @@
+info:
+  title: Jenkins server
+  author: James Walton
+  description: Create VM for Jenkins
+
+required:
+  - region
+  - zone
+  - machineType
+
+properties:
+  region:
+    description: Region for subnet(s)
+    type: string
+    default: us-east4
+  zone:
+    description: Zone for ingress instances
+    type: string
+    default: us-east4-c
+  machineType:
+    description: VM machine type
+    type: string
+    default: n1-standard-2
+  sourceImage:
+    description: Google URL for source boot disk (OS) image
+    type: string
+    default: projects/debian-cloud/global/images/debian-9-stretch-v20180611
+  bootDiskSizeGb:
+    description: Size of boot disk
+    type: integer
+    default: 10
+  dockerDiskSizeGb:
+    description: Size of boot disk
+    type: integer
+    default: 10
+  jenkinsDiskSizeGb:
+    description: Size of boot disk
+    type: integer
+    default: 10

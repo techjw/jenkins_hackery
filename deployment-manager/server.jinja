@@ -1,0 +1,89 @@
+resources:
+- type: compute.v1.instance
+  name: {{ env["deployment"] }}-server
+  properties:
+    zone: {{ properties["zone"] }}
+    machineType: projects/{{ env["project"] }}/zones/{{ properties["zone"] }}/machineTypes/{{ properties["machineType"] }}
+    networkInterfaces:
+    - network: $(ref.{{ env["deployment"] }}-network.selfLink)
+      subnetwork: $(ref.{{ env["deployment"] }}-subnet.selfLink)
+      accessConfigs:
+      - name: {{ env["deployment"] }}-server-eth0
+        type: ONE_TO_ONE_NAT
+    disks:
+    - deviceName: boot
+      type: PERSISTENT
+      boot: true
+      autoDelete: true
+      initializeParams:
+        diskName: {{ env["deployment"] }}-server-boot
+        diskType: projects/{{ env["project"] }}/zones/{{ properties["zone"] }}/diskTypes/pd-standard
+        diskSizeGb: {{ properties["bootDiskSizeGb"] }}
+        sourceImage: {{ properties["sourceImage"] }}
+    - deviceName: docker
+      type: PERSISTENT
+      boot: false
+      autoDelete: true
+      initializeParams:
+        diskName: {{ env["deployment"] }}-server-docker
+        diskType: projects/{{ env["project"] }}/zones/{{ properties["zone"] }}/diskTypes/pd-ssd
+        diskSizeGb: {{ properties["dockerDiskSizeGb"] }}
+    - deviceName: jenkins
+      type: PERSISTENT
+      boot: false
+      autoDelete: true
+      initializeParams:
+        diskName: {{ env["deployment"] }}-server-jenkins
+        diskType: projects/{{ env["project"] }}/zones/{{ properties["zone"] }}/diskTypes/pd-ssd
+        diskSizeGb: {{ properties["jenkinsDiskSizeGb"] }}
+    tags:
+      items:
+      - jenkins-server
+    metadata:
+      items:
+      - key: startup-script
+        value: |
+          #!/usr/bin/env bash
+          echo "===== Install xfs utilities and docker prereqs ====="
+          sudo apt-get update
+          sudo apt-get install -q -y xfsprogs apt-transport-https ca-certificates curl gnupg2 software-properties-common
+
+          for fs in "docker jenkins"; do
+          echo "===== Setup ${fs} volume ====="
+            sudo mkfs.xfs /dev/disk/by-id/google-${fs}
+            sudo mkdir -p /var/lib/${fs}
+            sudo mount /dev/disk/by-id/google-${fs} /var/lib/${fs}
+            echo "`sudo blkid /dev/disk/by-id/google-${fs} -o export |grep UUID`  /var/lib/${fs}  xfs  defaults  0  1" | sudo tee -a /etc/fstab
+          done
+
+          echo "===== Install docker ====="
+          curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
+          sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
+          sudo apt-get update
+          sudo apt-get install -q -y docker-ce
+
+          echo "===== Setup systemd unit jenkins.service ====="
+          cat << EOF |sudo tee /etc/systemd/system/jenkins.service
+          [Unit]
+          Description=Docker container that houses the Jenkins build service.
+          After=docker.service
+          Requires=docker.service
+
+          [Service]
+          TimeoutStartSec=120
+          Restart=on-failure
+          Group=docker
+          ExecStart=/usr/bin/docker run -u root --rm -p 8080:8080 -p 50000:50000 \
+           -v /var/lib/jenkins:/var/jenkins_home -v /var/run/docker.sock:/var/run/docker.sock \
+           --name jenkins-server jenkinsci/blueocean
+          ExecStop=/usr/bin/docker stop jenkins-server
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+outputs:
+- name: serverNetworkIp
+  value: $(ref.{{ env["deployment"] }}-server.networkInterfaces[0].networkIP)
+- name: serverNatIp
+  value: $(ref.{{ env["deployment"] }}-server.networkInterfaces[0].accessConfigs[0].natIP)
